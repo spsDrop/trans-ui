@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "jsx": "react",
+        "declaration": true,
+        "target": "es2015",
+        "outDir": "dist",
+        "module": "commonjs",
+        "noImplicitAny": false,
+        "rootDir": ".",
+        "sourceMap": false
+    },
+    "exclude": [
+        "node_modules"
+    ]
+}

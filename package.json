@@ -2,17 +2,36 @@
   "name": "trans-ui",
   "version": "0.0.1",
   "description": "User Interface for Prozen Transform",
-  "main": "src/index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "main": "dist/main.js",
   "author": "jfoltz",
   "license": "MIT",
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "npm run type-check -- --watch",
+    "build": "npm run build:types && npm run build:js",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build:js": "babel src --out-dir dist --extensions \".ts,.tsx\" --source-maps inline"
+  },
   "devDependencies": {
+    "@babel/cli": "^7.10.3",
+    "@babel/core": "^7.10.3",
+    "@babel/plugin-proposal-class-properties": "^7.10.1",
+    "@babel/preset-env": "^7.10.3",
     "@babel/preset-react": "^7.10.1",
+    "@babel/preset-typescript": "^7.10.1",
+    "@types/react": "^16.9.38",
+    "babel-loader": "^8.1.0",
+    "babel-plugin-emotion": "^10.0.33",
     "babel-watch": "^7.0.0",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "typescript": "^3.9.5",
     "webpack": "^4.43.0",
     "webpack-cli": "^3.3.12",
     "webpack-dev-server": "^3.11.0"
+  },
+  "dependencies": {
+    "@emotion/core": "^10.0.28",
+    "@emotion/styled": "^10.0.27"
   }
 }
