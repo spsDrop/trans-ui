@@ -1,5 +1,6 @@
 import * as React from 'react'
 import styled from '@emotion/styled'
+import {Link} from 'react-router-dom'
 
 const navHeight = '3rem'
 
@@ -25,8 +26,7 @@ const Sections = styled('div')`
     flex-direction: row;
 `
 
-const Section = styled.a`
-    display: block;
+const Section = styled(Link)`
     font-size: 0.8rem;
     color: white;
     letter-spacing: 0.2rem;
@@ -34,6 +34,7 @@ const Section = styled.a`
     box-sizing: border-box;
     font-weight: bold;
     position: relative;
+    margin-left: 3rem;
     :hover {
         text-decoration: none;
     }
@@ -54,24 +55,28 @@ const Section = styled.a`
 
 export type NavSection = {
     name: string,
-    location: string
+    page: string
 }
 
 type props = {
-    sections: Array<NavSection>
+    currentPage: string,
+    sections: Array<NavSection>,
+    getPath: (path:string) => string
 }
 
 export default class Nav extends React.Component<props>{
     render() {
         return (
             <NavWrapper>
-                <a href="/">
+                <Link to={this.props.getPath('')}>
                     <Logo src="/assets/images/static/phrozen_logo_w.png"/>
-                </a>
+                </Link>
                 <Sections>
                     {
                         this.props.sections.map( (section:NavSection) => (
-                            <Section href={section.location}>{section.name}</Section>
+                            <Section to={this.props.getPath(section.page)}>
+                                {section.name}
+                            </Section>
                         ))
                     }
                 </Sections>
