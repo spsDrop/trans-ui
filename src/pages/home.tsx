@@ -12,26 +12,24 @@ const HomeWrapper = styled.div`
     display: flex;
     flex-direction: row;
     justify-content: space-between;
+    align-items: center;
 `
 const SpalshPanel = styled.div`
     color: white;
+    padding: 6rem 0;
 `
 const SpalshTitle = styled.h1`
     font-size: 4rem;
-    margin-top:6rem;
     margin-bottom: 3rem;
 `
 const SpalshSubtitle = styled.p`
     font-size: 1rem;
-    margin-bottom: 3rem;
 `
 const SplashStatus = styled.div`
     background: white;
     color: #555;
     font-size: 1.5 rem;
     padding: 1.5rem 1.8rem;
-    margin-top: 3rem;
-    margin-right: 6rem;
     border-radius: .7rem;
     min-width: 18rem;
 `

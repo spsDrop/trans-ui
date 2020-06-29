@@ -2,20 +2,25 @@ import * as React from 'react'
 import styled from "@emotion/styled";
 import Nav from "./nav";
 import Home from './pages/home'
+import Plates from './pages/plates'
 import {BrowserRouter as Router, Route} from 'react-router-dom'
 
 import type {NavSection} from './nav'
 
 const AppWrapper = styled.div`
     min-height: 100vh;
-    background: top right no-repeat url('/assets/images/demo/home/home-banner.jpg');
-    background-size: cover;
-`
-const ClearPageWrapper = styled.div`
+    background: top right no-repeat url('/assets/images/demo/home/home-banner.jpg') #0D031A;
+    background-size: 175% auto;
     padding: 5rem 5rem;
 `
+const ClearPageWrapper = styled.div`
+`
 
-const PageWrapper = styled(ClearPageWrapper)``
+const PageWrapper = styled(ClearPageWrapper)`
+    padding: 3rem;
+    background-color: rgba(64, 64, 64, 0.8);
+    border-radius: 0.5rem;
+`
 
 
 const sections:Array<NavSection> = [
@@ -110,13 +115,15 @@ export default class TransUIApp extends React.Component<{}, State> {
         return (
             <AppWrapper>
                 <Router>
-                    <Route path={'/'} exact={false} render={({match}) => (
-                        <Nav sections={sections} getPath={getPath} currentPage={match.params.page}/>
+                    <Route path={'/'} exact={false} render={({location}) => (
+                        <Nav sections={sections} getPath={getPath} currentPage={location.pathname}/>
                     )}/>
                     <Route
-                        path={['/', getPath(':page')]}
+                        path={[getPath(':page'), '/']}
                         render={({match}) => {
                             switch(match.params.page) {
+                                case 'plates':
+                                    return <PageWrapper><Plates/></PageWrapper>
                                 case '':
                                 default:
                                     return <ClearPageWrapper><Home status={this.state.status}/></ClearPageWrapper>

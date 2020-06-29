@@ -6,6 +6,8 @@ const navHeight = '3rem'
 
 const NavWrapper = styled('div')`
     position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
     border-top: 0.5rem #19263a solid;
     display: flex;
@@ -48,7 +50,7 @@ const Section = styled(Link)`
         transition: height 0.25s ease-out;
         position: absolute;
     }
-    :hover:after {
+    :hover:after${props => props.isCurrentPage ? ', &:after' : ''} {
         height: 0.25rem;
     }
 `
@@ -74,7 +76,7 @@ export default class Nav extends React.Component<props>{
                 <Sections>
                     {
                         this.props.sections.map( (section:NavSection) => (
-                            <Section to={this.props.getPath(section.page)}>
+                            <Section isCurrentPage={this.props.currentPage && this.props.currentPage.match(section.page)} to={this.props.getPath(section.page)}>
                                 {section.name}
                             </Section>
                         ))
