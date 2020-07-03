@@ -183,7 +183,7 @@ export default class Plates extends React.Component<{},State> {
         axios.post('/api/plates/update', `resinId=${resinId}&plateId=${plateId}`).
             then(res => {
                 if(res.data.success){
-                    console.log('worked')
+                    this.updatePlates()
                 } else {
                     console.error(res.data.message);
                 }
