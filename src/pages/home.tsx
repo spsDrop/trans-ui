@@ -23,7 +23,7 @@ const SpalshTitle = styled.h1`
     margin-bottom: 3rem;
 `
 const SpalshSubtitle = styled.p`
-    font-size: 1rem;
+    font-size: 2rem;
 `
 const SplashStatus = styled.div`
     background: white;

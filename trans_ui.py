@@ -32,8 +32,14 @@ class TransUiApi(object):
         self.config = class_config.CONFIG()
         self.platesFilePath = os.path.join(self.fileRoot, 'plates_chitu_v2.json')
         self.resinsFilePath = os.path.join(self.fileRoot, 'ressin.json')
+        self.stateFilePath = os.path.join(self.fileRoot, 'serverState.json')
         self.platesDirPath = os.path.join(self.fileRoot, 'plates')
         self.platesTempDirPath = os.path.join(self.fileRoot, 'plates', 'tmp')
+
+        self.updateServerState({
+            'processingUpload': False,
+            'printInitializing': False
+        })
 
         self.updateStatus()
 
@@ -59,18 +65,24 @@ class TransUiApi(object):
         self.app.add_url_rule('/api/plates', 'apiPlates', self.apiPlates)
         self.app.add_url_rule(rule='/api/plates/update', view_func=self.apiPlatesUpdate, methods=['GET', 'POST'])
         self.app.add_url_rule(rule='/api/plates/upload', view_func=self.apiPlatesUpload, methods=['POST'])
+        self.app.add_url_rule(rule='/api/plates/delete', view_func=self.apiPlatesDelete, methods=['GET', 'POST'])
         self.app.add_url_rule('/api/resin', 'apiResin', self.apiResin)
 
     def updateStatus(self):
-        status = {}
         h3 = self.h3info_class.h3()
-        status['cpuLoad'] = h3.cpu_load()
-        status['diskUsage'] = h3.disk_usage()
-        status['cpuTemp'] = h3.cpu_temp()
-        status['uptime'] = h3.uptime()
-        status['printStatus'] = self.printerStatus
-        status['version'] = self.config.hostname
-        status['language'] = self.config.language
+        serverState = self.loadServerState()
+        status = {
+            'cpuLoad': h3.cpu_load(),
+            'diskUsage': h3.disk_usage(),
+            'cpuTemp': h3.cpu_temp(),
+            'uptime': h3.uptime(),
+            'printStatus': self.printerStatus,
+            'version': self.config.hostname,
+            'language': self.config.language,
+            'processingUpload': serverState['processingUpload'],
+            'processingStatus': serverState['processingStatus'],
+            'printInitializing': serverState['printInitializing']
+        }
 
         self.systemStatus = status
 
@@ -98,11 +110,27 @@ class TransUiApi(object):
     def loadPlates(self):
         return self.readJsonFile(self.platesFilePath)
 
+    def loadServerState(self):
+        try:
+            savedState = self.readJsonFile(self.stateFilePath)
+        except:
+            savedState = {}
+            self.writeServerState(savedState)
+        return savedState
+
     def writePlates(self, plates):
         self.writeJsonFile(self.platesFilePath, plates)
 
     def writeResins(self, resins):
         self.writeJsonFile(self.resinsFilePath, resins)
+
+    def writeServerState(self, state):
+        self.writeJsonFile(self.stateFilePath, state)
+
+    def updateServerState(self, state):
+        savedState = self.loadServerState()
+        savedState.update(state)
+        self.writeServerState(savedState)
 
     def allowedFile(self, fileName):
         return '.' in fileName and \
@@ -110,7 +138,6 @@ class TransUiApi(object):
 
     def writeNewPlate(self, id, layers, plateName, gcode, resinId):
         platesData = self.loadPlates()
-        platesData.sort(key=lambda s: s['ID'], reverse=True)
         arry_upload = {
             "ID": int(id),
             "LAYER": layers,
@@ -120,6 +147,7 @@ class TransUiApi(object):
             "SPEND_TIME":0
         }
         platesData.append(arry_upload)
+        platesData.sort(key=lambda s: s['ID'], reverse=True)
         self.writePlates(platesData)
 
     def resetDir(self, path):
@@ -147,8 +175,8 @@ class TransUiApi(object):
 
     def generateGcode(self, id):
         ChiGcodeFile = self.chiTuClass.ChiTuGcode()
-        ChiGcodeFile.srcPatch = os.path.join(self.platesDirPath, id, '/run.gcode')
-        ChiGcodeFile.destPatch = os.path.join(self.platesDirPath, id, '/gcode.txt')
+        ChiGcodeFile.srcPatch = os.path.join(self.platesDirPath, id, 'run.gcode')
+        ChiGcodeFile.destPatch = os.path.join(self.platesDirPath, id, 'gcode.txt')
         ChiGcodeFile.CreateGcode()
 
     # Logic Utilities
@@ -179,6 +207,9 @@ class TransUiApi(object):
     # Template Route Handlers
 
     def transIndex(self, page=''):
+        self.updateServerState({
+            'processingUpload': False
+        })
         return render_template_string(self.readFile('trans-ui/index.html'))
 
     # API Route handlers
@@ -220,6 +251,11 @@ class TransUiApi(object):
     def apiPlatesUpload(self):
         if not request.method == 'POST':
             return self.renderError('Only POST method is supported')
+
+        self.updateServerState({
+            'processingUpload': True,
+            'processingStatus': 'Processing request'
+        })
         
         # Setup variables
         file = request.files['file']
@@ -229,40 +265,79 @@ class TransUiApi(object):
         
         # Validate File and Type
         if not file or not self.allowedFile(file.filename):
+            self.updateServerState({'processingUpload': False})
             return self.renderError('Upload error or invalid file type.')
 
-        # Write Uploaded File to disk
-        self.writeUploadedFile(file, fileName)
+        try:
+            # Write Uploaded File to disk
+            self.updateServerState({'processingStatus': 'Writing file to disk'})
+            self.writeUploadedFile(file, fileName)
 
-        # Instantiate ChituPNG
-        chituPng = self.setupChituPng(id, fileName)
+            # Instantiate ChituPNG
+            self.updateServerState({'processingStatus': 'Validating uploaded file'})
+            chituPng = self.setupChituPng(id, fileName)
+            
+            # Validate File Contents
+            if not self.validateChituPng(chituPng):
+                self.updateServerState({'processingUpload': False})
+                return self.renderError('Resolution mismatch or error reading file.')
+
+            # Setup status variables
+            isGcode = chituPng.isChiTU() == False or fileType == 'ZIP'
+            resinId = isGcode if 0 else 1
+
+            # Clear output directory
+            self.resetDir(os.path.join(self.platesDirPath, id))
+            
+            # Extract file
+            self.updateServerState({'processingStatus': 'Extracting archive'})
+            if chituPng.isIncludeDir():
+                toZ=chituPng.ExtraX()
+            else:
+                toZ=chituPng.Extra()
+
+            # Write new plate meta data
+            plateName = request.values['fileName']
+            self.writeNewPlate(int(id), toZ, plateName, isGcode, resinId)
+
+            # Generate G-Code
+            if isGcode == True:
+                self.updateServerState({'processingStatus': 'Generating G-Code'})
+                self.generateGcode(id)
+        except:
+            self.updateServerState({'processingUpload': False})
+            return self.renderError('Error processing uploaded file.')
+
+        self.updateServerState({'processingUpload': False})
         
-        # Validate File Contents
-        if not self.validateChituPng(chituPng):
-            return self.renderError('Resolution mismatch or error reading file.')
+        return json.dumps({'success': True, 'plateId': id})
 
-        # Setup status variables
-        isGcode = chituPng.isChiTU() == False or fileType == 'ZIP'
-        resinId = isGcode if 0 else 1
 
-        # Clear output directory
-        self.resetDir(os.path.join(self.platesDirPath, id))
-        
-        # Extract file
-        if chituPng.isIncludeDir():
-            toZ=chituPng.ExtraX()
-        else:
-            toZ=chituPng.Extra()
+    def apiPlatesDelete(self):
+        try:
+            plateId = int(request.values.get('plateId'))
+        except:
+            return self.renderError('Error invalide input plateId.')
 
-        # Generate G-Code
-        if isGcode == True:
-            self.generateGcode(id)
+        if int(plateId) == 1:
+            return self.renderError('Cannot delete default plate.')
 
-        # Write new plate meta data
-        plateName = request.values['fileName']
-        self.writeNewPlate(int(id), toZ, plateName, isGcode, resinId)
-        
-        return {'success': True, 'plateId': id}
+        try:
+            path = os.path.join(self.platesDirPath, str(plateId))
+            subprocess.call(["rm", "-rf", path])
+            time.sleep(0.1)
+        except:
+            return self.renderError('Error deleting plate.')
+
+        try:
+            plates = list(filter(lambda plate: plate["ID"] != plateId, self.loadPlates()))
+
+            self.writePlates(plates)
+        except:
+            return self.renderError('Error writing plates data.')
+
+        return json.dumps({'success': True})
+
 
     def apiResin(self):
         return json.dumps(self.loadResins())

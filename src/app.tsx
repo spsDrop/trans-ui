@@ -4,6 +4,8 @@ import Nav from "./nav";
 import Home from './pages/home'
 import Plates from './pages/plates'
 import {BrowserRouter as Router, Route} from 'react-router-dom'
+import Modal from './modal'
+import {Details, Detail, Button, ContainerBox} from './commonStyledComponents'
 
 import type {NavSection} from './nav'
 
@@ -53,7 +55,11 @@ export type AppStatus = {
     diskUsage?: number,
     cpuTemp?: number,
     uptime?: number,
-    printStatus?: object
+    printStatus?: object,
+    version?: string,
+    language?: string,
+    processingUpload?: boolean,
+    processingStatus?: string
 }
 
 type State = {
@@ -105,15 +111,34 @@ export default class TransUIApp extends React.Component<{}, State> {
         fetch('/api/status').
             then(res => res.json()).
             then(data => {
+                console.log('processingUpload:'+data.processingUpload)
                 this.setState({
                     status: data
                 })
             })
     }
 
+    renderModal() {
+        const {
+            processingUpload,
+            processingStatus
+        } = this.state.status
+        if (processingUpload) {
+            return (
+                <Modal shown={true}>
+                    <Detail size="large">Processing Upload</Detail>
+                    <Detail size="small">Please wait while the upload is processed. This can take a few minutes.</Detail>
+                    <Detail size="small"><strong>Do not refresh the page</strong>.</Detail>
+                    <Detail>Current Status: {processingStatus}</Detail>
+                </Modal>
+            )
+        }
+    }
+
     render(){
         return (
             <AppWrapper>
+                {this.renderModal()}
                 <Router>
                     <Route path={'/'} exact={false} render={({location}) => (
                         <Nav sections={sections} getPath={getPath} currentPage={location.pathname}/>
@@ -123,7 +148,7 @@ export default class TransUIApp extends React.Component<{}, State> {
                         render={({match}) => {
                             switch(match.params.page) {
                                 case 'plates':
-                                    return <PageWrapper><Plates/></PageWrapper>
+                                    return <PageWrapper><Plates status={this.state.status}/></PageWrapper>
                                 case '':
                                 default:
                                     return <ClearPageWrapper><Home status={this.state.status}/></ClearPageWrapper>
