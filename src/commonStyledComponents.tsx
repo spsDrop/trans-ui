@@ -11,7 +11,7 @@ export const HorizontalGroup = styled.div`
 export const ContainerBox = styled.div`
     background-color: rgba(64, 64, 64, 0.9);
     padding: 2rem;
-    border-radius: 0.5rem;
+    border-radius: 0.35rem;
     margin-bottom: 2rem;
     color: white;
     :last-child {
@@ -21,10 +21,11 @@ export const ContainerBox = styled.div`
     }
 `
 
-export const Details = styled<'div', {align?: string}>('div')`
-    text-align: ${props => props.align || 'left'}
+export const Details = styled.div<{hidden?: boolean,align?: string}>`
+    display: ${props => props.hidden ? 'none' : 'block'};
+    text-align: ${props => props.align || 'left'};
 `
-export const Detail = styled<'div', {hidden?: boolean, size?: string}>('div')`
+export const Detail = styled.div<{hidden?: boolean, size?: string}>`
     display: ${props => props.hidden ? 'none' : 'block'};
     font-size: ${props =>{
         switch(props.size) {
@@ -56,8 +57,12 @@ export const getButtonColors = (hue) => `
     }
 `
 
-export const Button = styled.button`
-    display: inline-block;
+interface AsAble {
+    as?: React.ElementType | keyof JSX.IntrinsicElements;
+    hidden?: boolean;
+}
+export const Button = styled.button<AsAble>`
+    display: ${props => props.hidden ? 'none' : 'inline-block'};
     color: white;
     border: 0;
     border-radius: 0.5rem;
@@ -117,4 +122,37 @@ export const GreenButton = styled(Button)`
 `
 export const RedButton = styled(Button)`
     ${getButtonColors(10)}
+`
+
+
+export const PreviewWrap = styled.div<{previewUrl: string}>`
+    background: center center url(${props => props.previewUrl}) no-repeat;
+    background-size: cover;
+    position: relative;
+    margin-bottom: 1rem;
+    width: 100%;
+    padding-top: 57.25%;
+    border-radius: 0.25rem;
+    overflow: hidden;
+    img {
+        transition: opacity 250ms ease-out;
+        opacity: 0;
+    }
+    :hover img, :focus img {
+        opacity: 1;
+    }
+`
+export const PreviewDetail = styled(ContainerBox)`
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    padding: 0.75rem;
+    background-color: rgba(16, 16, 16, 0.9);
+`
+export const Preview = styled.img`
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
 `

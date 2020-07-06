@@ -36,10 +36,7 @@ class TransUiApi(object):
         self.platesDirPath = os.path.join(self.fileRoot, 'plates')
         self.platesTempDirPath = os.path.join(self.fileRoot, 'plates', 'tmp')
 
-        self.updateServerState({
-            'processingUpload': False,
-            'printInitializing': False
-        })
+        self.initializeServerState()
 
         self.updateStatus()
 
@@ -51,7 +48,12 @@ class TransUiApi(object):
         @mqtt.on_message()
         def handleMessage(client, userdata, message):
             payload = message.payload.decode()
+            serverState = self.loadServerState()
             self.printerStatus = json.loads(payload)
+
+            if self.printerStatus["PRINTING"] == True and serverState["printInitializing"] == True :
+                self.updateServerState({'printInitializing': False})
+
             self.updateStatus()
 
     # Internal Buisness and State
@@ -63,14 +65,19 @@ class TransUiApi(object):
 
         self.app.add_url_rule('/api/status', 'apiStatus', self.apiStatus)
         self.app.add_url_rule('/api/plates', 'apiPlates', self.apiPlates)
-        self.app.add_url_rule(rule='/api/plates/update', view_func=self.apiPlatesUpdate, methods=['GET', 'POST'])
+        self.app.add_url_rule(rule='/api/plates/updateResin/<int:plateId>/<int:resinId>', view_func=self.apiPlatesUpdate, methods=['GET', 'POST'])
         self.app.add_url_rule(rule='/api/plates/upload', view_func=self.apiPlatesUpload, methods=['POST'])
-        self.app.add_url_rule(rule='/api/plates/delete', view_func=self.apiPlatesDelete, methods=['GET', 'POST'])
+        self.app.add_url_rule(rule='/api/plates/delete/<int:plateId>', view_func=self.apiPlatesDelete, methods=['GET', 'POST'])
+        self.app.add_url_rule(rule='/api/plates/print/<int:plateId>', view_func=self.apiPlatesPrint, methods=['GET', 'POST'])
         self.app.add_url_rule('/api/resin', 'apiResin', self.apiResin)
+        self.app.add_url_rule('/api/print/stop', 'apiPrintStop', self.apiPrintStop)
+        self.app.add_url_rule('/api/print/pause', 'apiPrintPause', self.apiPrintPause)
+        self.app.add_url_rule('/api/print/resume', 'apiPrintResume', self.apiPrintResume)
 
     def updateStatus(self):
         h3 = self.h3info_class.h3()
         serverState = self.loadServerState()
+
         status = {
             'cpuLoad': h3.cpu_load(),
             'diskUsage': h3.disk_usage(),
@@ -79,9 +86,9 @@ class TransUiApi(object):
             'printStatus': self.printerStatus,
             'version': self.config.hostname,
             'language': self.config.language,
-            'processingUpload': serverState['processingUpload'],
-            'processingStatus': serverState['processingStatus'],
-            'printInitializing': serverState['printInitializing']
+            'processingUpload': serverState.get('processingUpload'),
+            'processingStatus': serverState.get('processingStatus'),
+            'printInitializing': serverState.get('printInitializing')
         }
 
         self.systemStatus = status
@@ -114,9 +121,14 @@ class TransUiApi(object):
         try:
             savedState = self.readJsonFile(self.stateFilePath)
         except:
-            savedState = {}
-            self.writeServerState(savedState)
+            self.initializeServerState()
         return savedState
+
+    def initializeServerState(self):
+        self.writeServerState({
+            'processingUpload': False,
+            'printInitializing': False
+        })
 
     def writePlates(self, plates):
         self.writeJsonFile(self.platesFilePath, plates)
@@ -184,12 +196,18 @@ class TransUiApi(object):
     def isValidResinId(self, id, resins=[]):
         if bool(resins):
             resins = self.loadResins()
-        return bool(self.getResinById(id, resins))
+        try:
+            return bool(self.getResinById(id, resins))
+        except:
+            return False
 
     def isValidPlateId(self, id, plates=[]):
         if bool(plates):
             plates = self.loadPlates()
-        return bool(self.getPlateById(id, plates))
+        try:
+            return bool(self.getPlateById(id, plates))
+        except:
+            return False
 
     def getResinById(self, id, plates):
         return next(filter(lambda r: r.get('id') == id, plates))
@@ -221,47 +239,35 @@ class TransUiApi(object):
     def apiPlates(self):
         return json.dumps(self.loadPlates())
 
-    def apiPlatesUpdate(self):
-        status = {
-            'success': False
-        }
+    def apiPlatesUpdate(self, plateId, resinId):
         plates = self.loadPlates()
         resins = self.loadResins()
 
-        try:
-            resinId = int(request.values.get('resinId'))
-            plateId = int(request.values.get('plateId'))
-        except:
-            status['message'] = 'Invalid inputs'
-            return json.dumps(status)
-
 
         if not self.isValidPlateId(plateId, plates) or not self.isValidResinId(resinId, resins):
-            status['message'] = 'Invalid plate or resin id'
-            return json.dumps(status)
+            return self.renderError('Invalid plate or resin id')
 
         plate = self.getPlateById(plateId, plates)
         plate["PROFILE_ID"] = resinId
         self.writePlates(plates)
-        status["success"] = True
 
-        return json.dumps(status)
+        return json.dumps({'success': True})
 
 
     def apiPlatesUpload(self):
         if not request.method == 'POST':
             return self.renderError('Only POST method is supported')
-
-        self.updateServerState({
-            'processingUpload': True,
-            'processingStatus': 'Processing request'
-        })
         
         # Setup variables
         file = request.files['file']
         id = str(int(time.time() * 10 ))
         fileType = file.filename[-3:].upper()
         fileName = id + '.zip'
+
+        self.updateServerState({
+            'processingUpload': True,
+            'processingStatus': 'Processing request'
+        })
         
         # Validate File and Type
         if not file or not self.allowedFile(file.filename):
@@ -313,11 +319,7 @@ class TransUiApi(object):
         return json.dumps({'success': True, 'plateId': id})
 
 
-    def apiPlatesDelete(self):
-        try:
-            plateId = int(request.values.get('plateId'))
-        except:
-            return self.renderError('Error invalide input plateId.')
+    def apiPlatesDelete(self, plateId):
 
         if int(plateId) == 1:
             return self.renderError('Cannot delete default plate.')
@@ -338,6 +340,39 @@ class TransUiApi(object):
 
         return json.dumps({'success': True})
 
+    def apiPlatesPrint(self, plateId):
+        if not self.isValidPlateId(plateId):
+            return self.renderError('Invalid plateId.')
+
+        subprocess.call(["mqttpub.sh", "printer/printchitu", plateId])
+
+        self.updateServerState({ 'printInitializing': True })
+
+        return json.dumps({'success': True})
+
+    def apiPrintStop(self):
+        try:
+            subprocess.call(["mqttpub.sh", "printer/printchitu", 'N'])
+        except:
+            return self.renderError('Error communicating with print process')
+
+        return json.dumps({'success': True})
+
+    def apiPrintResume(self):
+        try:
+	        subprocess.call(["mqttpub.sh", "printer/resume", "R"])
+        except:
+            return self.renderError('Error communicating with print process')
+
+        return json.dumps({'success': True})
+
+    def apiPrintPause(self):
+        try:
+            subprocess.call(["mqttpub.sh", "printer/resume", "P"])
+        except:
+            return self.renderError('Error communicating with print process')
+
+        return json.dumps({'success': True})
 
     def apiResin(self):
         return json.dumps(self.loadResins())

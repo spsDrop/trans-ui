@@ -1,18 +1,21 @@
 import * as React from 'react'
 import styled from "@emotion/styled"
-import { secondsToDuration } from "../utils/time";
+import { secondsToTimeString } from "../utils/time";
 import type { Duration } from "../utils/time";
 import type { AppStatus } from '../app'
+import {singleColumnBreak, HorizontalGroup} from '../commonStyledComponents'
 
 type Props = {
     status: AppStatus
 }
 
-const HomeWrapper = styled.div`
-    display: flex;
-    flex-direction: row;
+const HomeWrapper = styled(HorizontalGroup)`
     justify-content: space-between;
     align-items: center;
+    @media (max-width: ${singleColumnBreak}) {
+        flex-direction: column;
+        align-items: stretch;
+    }
 `
 const SpalshPanel = styled.div`
     color: white;
@@ -44,12 +47,6 @@ const SplashStatusLine = styled.div`
 export default class Home extends React.Component<Props>{
     render() {
         const { uptime = 0} = this.props.status
-        const {
-            seconds,
-            minutes,
-            hours,
-            days
-        } = secondsToDuration(uptime)
 
         return (
             <HomeWrapper>
@@ -66,7 +63,7 @@ export default class Home extends React.Component<Props>{
                     {(this.props.status.cpuLoad > -1 && <SplashStatusLine>CPU Usage: {this.props.status.cpuLoad}%</SplashStatusLine>)}
                     {(this.props.status.cpuTemp && <SplashStatusLine>CPU Temp: {this.props.status.cpuTemp}°c</SplashStatusLine>)}
                     {(this.props.status.diskUsage && <SplashStatusLine>Disk Usage: {this.props.status.diskUsage}%</SplashStatusLine>)}
-                    {(this.props.status.uptime && <SplashStatusLine>Uptime: {days}d {hours}h {minutes}m {seconds}s</SplashStatusLine>)}
+                    {(this.props.status.uptime && <SplashStatusLine>Uptime: {secondsToTimeString(uptime)}</SplashStatusLine>)}
                 </SplashStatus>
             </HomeWrapper>
         )

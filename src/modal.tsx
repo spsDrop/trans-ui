@@ -13,15 +13,35 @@ const ModalBackground = styled.div`
     left: 0;
     height: 100%;
     background: hsla(0, 0%, 5%, 0.8);
+    animation: fadeIn 0.25s ease-out;
+
+    @keyframes fadeIn {
+        0% { opacity: 0; }
+        100% { opacity: 1; }
+    }
 `
 const ModalWrapper = styled.div`
     position: fixed;
-    top: 20rem;
+    top: 10rem;
     width: 100%;
 `
 const ModalContent = styled(ContainerBox)`
     width: max-content;
+    max-width: 90%;
+    box-sizing: border-box;
     margin: auto;
+    animation: slideIn 0.25s cubic-bezier(0.5, 1, 0.89, 1);
+
+    @keyframes slideIn {
+        0% {
+            opacity: 0;
+            transform: translateY(-100%);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 `;
 
 export default class Modal extends React.Component<{shown: boolean}> {

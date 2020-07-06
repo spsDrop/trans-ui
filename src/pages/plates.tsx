@@ -1,8 +1,10 @@
+/** @jsx jsx */
+import { css, jsx } from '@emotion/core'
 import * as React from 'react'
 import styled from "@emotion/styled"
 import { AppStatus } from '../app'
-import { secondsToDuration } from "../utils/time";
-import { Detail, Details, HorizontalGroup, ContainerBox, Button, RedButton, GreenButton, singleColumnBreak } from '../commonStyledComponents'
+import { secondsToTimeString, calculatePrintTime } from "../utils/time";
+import { Detail, Details, HorizontalGroup, ContainerBox, PreviewWrap, Preview, PreviewDetail, Button, RedButton, GreenButton, singleColumnBreak } from '../commonStyledComponents'
 import Modal from '../modal'
 import axios from 'axios'
 const CancelToken = axios.CancelToken;
@@ -31,6 +33,8 @@ export type ResinProfile =   {
     push_speed: number
 }
 
+
+
 const PlatesWrapper = styled(HorizontalGroup)`
     justify-content: stretch;
     @media (max-width: ${singleColumnBreak}) {
@@ -46,30 +50,6 @@ const PlateList = styled.div`
     }
 `
 const Plate = styled(ContainerBox)``
-const PreviewWrap = styled.div`
-    position: relative;
-    margin-bottom: 1rem;
-    width: 100%;
-    padding-top: 57.25%;
-`
-const PreviewDetail = styled(ContainerBox)`
-    position: absolute;
-    bottom: 1rem;
-    left: 1rem;
-    padding: 0.75rem;
-    background-color: rgba(16, 16, 16, 0.9);
-`
-const Preview = styled.img`
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-`
-const Name = styled(Detail)`
-    font-weight: bold;
-    font-size: 1.5rem;
-`
 
 const UploadWrapper = styled(ContainerBox)`
     min-width: 19rem;
@@ -92,13 +72,12 @@ const UploadProgress = styled.div`
     width: 100%;
     box-sizing: border-box;
 `
-const UploadProgressBar = styled<'div', {progress: number}>('div')`
+const UploadProgressBar = styled.div`
     box-sizing: border-box;
     padding: 0.25rem 1rem;
     border-radius: 1rem;
     color: white;
     background-color: hsl(124, 40%, 55%);
-    width: ${props => props.progress * 100}%;
     min-width: 4rem;
     text-align: right;
     border: 1px solid hsl(124,40%,40%);
@@ -110,7 +89,8 @@ type State = {
     fileName?: string,
     uploading: boolean,
     uploadProgress: number,
-    plateToDelete?: number
+    plateToDelete?: number,
+    plateToPrint?: number
 }
 
 export default class Plates extends React.Component<{status: AppStatus},State> {
@@ -158,7 +138,7 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
 
     changeResin(e, plateId) {
         const resinId = Number(e.target.value)
-        axios.post('/api/plates/update', `resinId=${resinId}&plateId=${plateId}`).
+        axios.post(`/api/plates/updateResin/${plateId}/${resinId}`).
             then(res => {
                 if(res.data.success){
                     this.updatePlates()
@@ -199,17 +179,20 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
                     })
                 }
             }
-        ).then(() => {
-            console.log('SUCCESS!!');
+        ).then(res => {
             this.cancelCallback = undefined;
             this.setState({
                 uploading: false,
                 uploadProgress: 0
             })
-            this.updatePlates();
+            if (res.data.success) {
+                this.updatePlates();
+            }else {
+                console.error(res.data.message)
+            }
         })
-        .catch(() => {
-            console.log('FAILURE!!');
+        .catch(error => {
+            console.log(error);
             this.cancelCallback = undefined;
             this.setState({
                 uploading: false,
@@ -238,24 +221,45 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
         })
     }
 
-    cancelDelete() {
+    cancelModal() {
         this.setState({
-            plateToDelete: undefined
+            plateToDelete: undefined,
+            plateToPrint: undefined
         })
     }
 
     deletePlate() {
-        axios.post('/api/plates/delete', `plateId=${this.state.plateToDelete}`).
+        axios.post(`/api/plates/delete/${this.state.plateToDelete}`).
             then(res => {
                 if(res.data.success){
-                    this.cancelDelete()
+                    this.cancelModal()
                     this.updatePlates()
                 } else {
                     console.error(res.data.message);
                 }
             }).
             catch(error => {
-                console.log(error)
+                console.error(error)
+            })
+    }
+
+    promptPrintPlate(plateId) {
+        this.setState({
+            plateToPrint: plateId
+        })
+    }
+
+    printPlate() {
+        axios.post(`/api/plates/print/${this.state.plateToPrint}`).
+            then(res => {
+                if(res.data.success){
+                    this.cancelModal()
+                } else {
+                    console.error(res.data.message);
+                }
+            }).
+            catch(error => {
+                console.error(error)
             })
     }
 
@@ -278,27 +282,28 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
     }
 
     renderPlates(plates, uploading) {
+        const { resin:resinList } = this.state; 
         return (
             <PlateList>{
                 plates.map( (plate: PlateProfile) => {
-                    const {
-                        days,
-                        hours,
-                        minutes
-                    } = secondsToDuration(plate.SPEND_TIME || 0)
+                    const resin = resinList.filter(resinProfile => resinProfile.id === plate.PROFILE_ID)[0]
+                    const projectedTime = calculatePrintTime(resin, plate.LAYER)
+                    
                     return (
                         <Plate>
-                            <Name>{plate.NAME}</Name>
-                            <PreviewWrap>
+                            <Detail size="large">{plate.NAME}</Detail>
+                            <PreviewWrap
+                                tabIndex={-1}
+                                previewUrl={`/plates/${plate.ID}/preview.png`}
+                            >
                                 <Preview src={`/plates/${plate.ID}/1.png`}/>
                                 <PreviewDetail>
                                     <Detail>
                                         {plate.LAYER} Layers
                                     </Detail>
-                                    {(
-                                        (plate.SPEND_TIME > 0) && 
-                                        <Detail>Duration{days > 0 && ` ${days}d`}{hours > 0 && ` ${hours}h`}{minutes > 0 && ` ${minutes}m`}</Detail>
-                                    )}
+                                    <Detail>
+                                        Duration {secondsToTimeString(plate.SPEND_TIME || projectedTime)}
+                                    </Detail>
                                 </PreviewDetail>
                             </PreviewWrap>
                             <HorizontalGroup>
@@ -306,7 +311,7 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
                                     {this.renderResinOption(plate)}
                                 </Details>
                                 <Details>
-                                    <GreenButton disabled={uploading}>
+                                    <GreenButton onClick={()=>this.promptPrintPlate(plate.ID)} disabled={uploading}>
                                         Print
                                     </GreenButton>
                                     <RedButton onClick={()=> this.promptDeletePlate(plate.ID)} disabled={uploading}>
@@ -321,13 +326,27 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
         )
     }
 
+    renderModal(action: string, ConfirmButton, confirmAction: ()=> void) {
+        return (
+            <Modal shown={true}>
+                <Detail>Are you sure your want to {action.toLowerCase()} this plate?</Detail>
+                <Details align="right">
+                    <Button css={css({marginBottom: 0})} onClick={()=> this.cancelModal()}>Cancel</Button>
+                    <ConfirmButton css={css({marginBottom: 0})} onClick={confirmAction}>{action}</ConfirmButton>
+                </Details>
+            </Modal>
+        );
+    }
+
     render() {
         const {
             plates,
             fileName,
             uploading,
             uploadProgress,
-            plateToDelete
+            plateToDelete,
+            plateToPrint,
+            resin
         } = this.state
 
         const uploadComplete = uploadProgress == 1;
@@ -335,14 +354,9 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
 
         return (
             <PlatesWrapper>
-                <Modal shown={!!plateToDelete}>
-                    <Detail>Are you sure your want to delete this plate?</Detail>
-                    <Details align="right">
-                        <Button onClick={()=> this.cancelDelete()}>Cancel</Button>
-                        <RedButton onClick={()=> this.deletePlate()}>Delete</RedButton>
-                    </Details>
-                </Modal>
-                {(plates &&  this.renderPlates(plates, uploading))}
+                {plateToDelete && this.renderModal('Delete', RedButton, ()=> this.deletePlate())}
+                {plateToPrint && this.renderModal('Print', GreenButton, ()=> this.printPlate())}
+                {(!!plates?.length && !!resin?.length &&  this.renderPlates(plates, uploading))}
                 <UploadWrapper>
                     <Detail hidden={!uploading}>
                         <Detail hidden={uploadComplete}>Uploading '{fileName}'</Detail>
@@ -362,7 +376,9 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
                             type="file"
                             accept=".zip,.phz"
                             id="fileInput"
-                        />
+                        />{/* 
+                        // We don't care about this 'for' input error
+                        // @ts-ignore */}
                         <ChooseFileButton disabled={uploading} as="label" for="fileInput">
                             Select File to Upload (Zip, Phz)
                         </ChooseFileButton>
