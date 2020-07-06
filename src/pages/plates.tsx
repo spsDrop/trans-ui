@@ -6,6 +6,7 @@ import { AppStatus } from '../app'
 import { secondsToTimeString, calculatePrintTime } from "../utils/time";
 import { Detail, Details, HorizontalGroup, ContainerBox, PreviewWrap, Preview, PreviewDetail, Button, RedButton, GreenButton, singleColumnBreak } from '../commonStyledComponents'
 import Modal from '../modal'
+import PlateViewer from '../plateViewer'
 import axios from 'axios'
 const CancelToken = axios.CancelToken;
 
@@ -34,7 +35,9 @@ export type ResinProfile =   {
 }
 
 
-
+const PreviewLink = styled(Preview)`
+    cursor: pointer;
+`
 const PlatesWrapper = styled(HorizontalGroup)`
     justify-content: stretch;
     @media (max-width: ${singleColumnBreak}) {
@@ -90,7 +93,8 @@ type State = {
     uploading: boolean,
     uploadProgress: number,
     plateToDelete?: number,
-    plateToPrint?: number
+    plateToPrint?: number,
+    plateToView?: number
 }
 
 export default class Plates extends React.Component<{status: AppStatus},State> {
@@ -263,6 +267,12 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
             })
     }
 
+    viewPlate(plateId) {
+        this.setState({
+            plateToView: plateId
+        })
+    }
+
     renderResinOption(plate: PlateProfile) {
         const {
             resin,
@@ -288,15 +298,16 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
                 plates.map( (plate: PlateProfile) => {
                     const resin = resinList.filter(resinProfile => resinProfile.id === plate.PROFILE_ID)[0]
                     const projectedTime = calculatePrintTime(resin, plate.LAYER)
-                    
+
                     return (
                         <Plate>
                             <Detail size="large">{plate.NAME}</Detail>
                             <PreviewWrap
                                 tabIndex={-1}
                                 previewUrl={`/plates/${plate.ID}/preview.png`}
+                                onClick={()=> this.viewPlate(plate.ID)}
                             >
-                                <Preview src={`/plates/${plate.ID}/1.png`}/>
+                                <PreviewLink src={`/plates/${plate.ID}/1.png`}/>
                                 <PreviewDetail>
                                     <Detail>
                                         {plate.LAYER} Layers
@@ -338,6 +349,20 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
         );
     }
 
+    renderViewModal(plateId) {
+        const plateData: PlateProfile = this.state.plates.filter(plate => plate.ID === plateId)[0]
+        return (
+            <Modal shown={true}>
+                <Details>
+                    <PlateViewer plateName={plateData.NAME} plateId={plateId} totalLayers={plateData.LAYER}/>
+                </Details>
+                <Details>
+                    <Button onClick={()=> this.setState({plateToView: undefined})}>Close</Button>
+                </Details>
+            </Modal>
+        )
+    }
+
     render() {
         const {
             plates,
@@ -346,6 +371,7 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
             uploadProgress,
             plateToDelete,
             plateToPrint,
+            plateToView,
             resin
         } = this.state
 
@@ -356,6 +382,7 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
             <PlatesWrapper>
                 {plateToDelete && this.renderModal('Delete', RedButton, ()=> this.deletePlate())}
                 {plateToPrint && this.renderModal('Print', GreenButton, ()=> this.printPlate())}
+                {plateToView && this.renderViewModal(plateToView)}
                 {(!!plates?.length && !!resin?.length &&  this.renderPlates(plates, uploading))}
                 <UploadWrapper>
                     <Detail hidden={!uploading}>
