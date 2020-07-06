@@ -14,6 +14,7 @@ const ModalBackground = styled.div`
     height: 100%;
     background: hsla(0, 0%, 5%, 0.8);
     animation: fadeIn 0.25s ease-out;
+    z-index: 3;
 
     @keyframes fadeIn {
         0% { opacity: 0; }
@@ -24,6 +25,7 @@ const ModalWrapper = styled.div`
     position: fixed;
     top: 10rem;
     width: 100%;
+    z-index: 4;
 `
 const ModalContent = styled(ContainerBox)`
     width: max-content;

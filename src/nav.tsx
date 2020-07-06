@@ -16,7 +16,7 @@ const NavWrapper = styled('div')`
     background-color: rgba(27, 37, 77, 0.35);
     padding: 0.5rem 2rem;
     box-sizing: border-box;
-    z-index: 10;
+    z-index: 2;
 `
 
 const Logo = styled('img')`
