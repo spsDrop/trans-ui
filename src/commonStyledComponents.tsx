@@ -77,6 +77,7 @@ export const Button = styled.button<AsAble>`
     cursor: pointer;
 
     :hover {
+        text-decoration: none;
         outline: none;
         box-shadow: inset 0 0 3rem;
     }
@@ -93,6 +94,7 @@ export const Button = styled.button<AsAble>`
     }
 
     &[disabled] {
+        pointer-events: none;
         background-color: #667a99;
         :focus, :hover {
             box-shadow: none;

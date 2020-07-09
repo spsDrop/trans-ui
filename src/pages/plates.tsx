@@ -1,13 +1,15 @@
 /** @jsx jsx */
 import { css, jsx } from '@emotion/core'
 import * as React from 'react'
+import {BrowserRouter as Router, Route, Link} from 'react-router-dom'
 import styled from "@emotion/styled"
-import { AppStatus } from '../app'
+import { AppStatus, getPath } from '../app'
 import { secondsToTimeString, calculatePrintTime } from "../utils/time";
 import { Detail, Details, HorizontalGroup, ContainerBox, PreviewWrap, Preview, PreviewDetail, Button, RedButton, GreenButton, singleColumnBreak } from '../commonStyledComponents'
 import Modal from '../modal'
 import PlateViewer from '../plateViewer'
 import axios from 'axios'
+import { ResinProfile } from './profiles'
 const CancelToken = axios.CancelToken;
 
 export type PlateProfile = {
@@ -19,21 +21,9 @@ export type PlateProfile = {
     SPEND_TIME: number
 }
 
-export type ResinProfile =   {
-    Z: string,
-    burnCure: number,
-    burnLayer: number,
-    burn_pull_speed: number,
-    burn_pull_z: number,
-    id: number,
-    led_delay: number,
-    name: string,
-    normalCure: number,
-    pull_speed: number,
-    pull_z: number,
-    push_speed: number
-}
-
+const LinkedRedButton = RedButton.withComponent(Link)
+const LinkedGreenButton = GreenButton.withComponent(Link)
+const LinkedButton = Button.withComponent(Link)
 
 const PreviewLink = styled(Preview)`
     cursor: pointer;
@@ -219,21 +209,8 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
         }
     }
 
-    promptDeletePlate(plateId) {
-        this.setState({
-            plateToDelete: plateId
-        })
-    }
-
-    cancelModal() {
-        this.setState({
-            plateToDelete: undefined,
-            plateToPrint: undefined
-        })
-    }
-
-    deletePlate() {
-        axios.post(`/api/plates/delete/${this.state.plateToDelete}`).
+    deletePlate(plateId) {
+        axios.post(`/api/plates/delete/${plateId}`).
             then(res => {
                 if(res.data.success){
                     this.cancelModal()
@@ -247,14 +224,8 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
             })
     }
 
-    promptPrintPlate(plateId) {
-        this.setState({
-            plateToPrint: plateId
-        })
-    }
-
-    printPlate() {
-        axios.post(`/api/plates/print/${this.state.plateToPrint}`).
+    printPlate(plateId) {
+        axios.post(`/api/plates/print/${plateId}`).
             then(res => {
                 if(res.data.success){
                     this.cancelModal()
@@ -267,10 +238,9 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
             })
     }
 
-    viewPlate(plateId) {
-        this.setState({
-            plateToView: plateId
-        })
+    cancelModal() {
+        history.replaceState({}, '', getPath('plates'))
+        history.back()
     }
 
     renderResinOption(plate: PlateProfile) {
@@ -302,32 +272,33 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
                     return (
                         <Plate>
                             <Detail size="large">{plate.NAME}</Detail>
-                            <PreviewWrap
-                                tabIndex={-1}
-                                previewUrl={`/plates/${plate.ID}/preview.png`}
-                                onClick={()=> this.viewPlate(plate.ID)}
-                            >
-                                <PreviewLink src={`/plates/${plate.ID}/1.png`}/>
-                                <PreviewDetail>
-                                    <Detail>
-                                        {plate.LAYER} Layers
-                                    </Detail>
-                                    <Detail>
-                                        Duration {secondsToTimeString(plate.SPEND_TIME || projectedTime)}
-                                    </Detail>
-                                </PreviewDetail>
-                            </PreviewWrap>
+                            <Link to={getPath(`plates/preview/${plate.ID}`)}>
+                                <PreviewWrap
+                                    tabIndex={-1}
+                                    previewUrl={`/plates/${plate.ID}/preview.png`}
+                                >
+                                    <PreviewLink src={`/plates/${plate.ID}/1.png`}/>
+                                    <PreviewDetail>
+                                        <Detail>
+                                            {plate.LAYER} Layers
+                                        </Detail>
+                                        <Detail>
+                                            Duration {secondsToTimeString(plate.SPEND_TIME || projectedTime)}
+                                        </Detail>
+                                    </PreviewDetail>
+                                </PreviewWrap>
+                            </Link>
                             <HorizontalGroup>
                                 <Details>
                                     {this.renderResinOption(plate)}
                                 </Details>
                                 <Details>
-                                    <GreenButton onClick={()=>this.promptPrintPlate(plate.ID)} disabled={uploading}>
+                                    <LinkedGreenButton disabled={uploading} to={getPath(`plates/print/${plate.ID}`)}>
                                         Print
-                                    </GreenButton>
-                                    <RedButton onClick={()=> this.promptDeletePlate(plate.ID)} disabled={uploading}>
+                                    </LinkedGreenButton>
+                                    <LinkedRedButton disabled={uploading} to={getPath(`plates/delete/${plate.ID}`)}>
                                         Delete
-                                    </RedButton>
+                                    </LinkedRedButton>
                                 </Details>
                             </HorizontalGroup>
                         </Plate>
@@ -357,7 +328,7 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
                     <PlateViewer plateName={plateData.NAME} plateId={plateId} totalLayers={plateData.LAYER}/>
                 </Details>
                 <Details>
-                    <Button onClick={()=> this.setState({plateToView: undefined})}>Close</Button>
+                    <Button onClick={()=> this.cancelModal()}>Close</Button>
                 </Details>
             </Modal>
         )
@@ -380,38 +351,55 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
 
         return (
             <PlatesWrapper>
-                {plateToDelete && this.renderModal('Delete', RedButton, ()=> this.deletePlate())}
-                {plateToPrint && this.renderModal('Print', GreenButton, ()=> this.printPlate())}
-                {plateToView && this.renderViewModal(plateToView)}
-                {(!!plates?.length && !!resin?.length &&  this.renderPlates(plates, uploading))}
-                <UploadWrapper>
-                    <Detail hidden={!uploading}>
-                        <Detail hidden={uploadComplete}>Uploading '{fileName}'</Detail>
-                        <Detail hidden={!uploadComplete}>Upload Complete</Detail>
-                        <UploadProgress>
-                            <UploadProgressBar style={{width: progress+'%'}}>
-                                {Math.round(progress)}%
-                            </UploadProgressBar>
-                        </UploadProgress>
-                        <RedButton disabled={uploadComplete} onClick={() => this.cancelUpload()}>Cancel Upload</RedButton>
-                    </Detail>
-                    <Detail hidden={uploading}>
-                        <Detail>{fileName || 'No File Selected'}</Detail>
-                        <UploadInput
-                            onChange={() => this.changeFile()}
-                            ref={el => this.uploadEl = el}
-                            type="file"
-                            accept=".zip,.phz"
-                            id="fileInput"
-                        />{/* 
-                        // We don't care about this 'for' input error
-                        // @ts-ignore */}
-                        <ChooseFileButton disabled={uploading} as="label" for="fileInput">
-                            Select File to Upload (Zip, Phz)
-                        </ChooseFileButton>
-                        <UploadButton disabled={!fileName} onClick={() => this.uploadFile()}>Upload</UploadButton>
-                    </Detail>
-                </UploadWrapper>
+                <Router>
+                    <Route
+                        path={getPath('plates/delete/:plateId')}
+                        render={({match:{params:{plateId}}}) => {
+                            return this.renderModal('Delete', RedButton, () => {this.deletePlate(parseInt(plateId, 10))})
+                        }}
+                    />
+                    <Route
+                        path={getPath('plates/print/:plateId')}
+                        render={({match:{params:{plateId}}}) => {
+                            return this.renderModal('Print', GreenButton, () => {this.printPlate(parseInt(plateId, 10))})
+                        }}
+                    />
+                    <Route
+                        path={getPath('plates/preview/:plateId')}
+                        render={({match:{params:{plateId}}}) => {
+                            return !!plates?.length && this.renderViewModal(parseInt(plateId, 10))
+                        }}
+                    />
+                    {(!!plates?.length && !!resin?.length &&  this.renderPlates(plates, uploading))}
+                    <UploadWrapper>
+                        <Detail hidden={!uploading}>
+                            <Detail hidden={uploadComplete}>Uploading '{fileName}'</Detail>
+                            <Detail hidden={!uploadComplete}>Upload Complete</Detail>
+                            <UploadProgress>
+                                <UploadProgressBar style={{width: progress+'%'}}>
+                                    {Math.round(progress)}%
+                                </UploadProgressBar>
+                            </UploadProgress>
+                            <RedButton disabled={uploadComplete} onClick={() => this.cancelUpload()}>Cancel Upload</RedButton>
+                        </Detail>
+                        <Detail hidden={uploading}>
+                            <Detail>{fileName || 'No File Selected'}</Detail>
+                            <UploadInput
+                                onChange={() => this.changeFile()}
+                                ref={el => this.uploadEl = el}
+                                type="file"
+                                accept=".zip,.phz"
+                                id="fileInput"
+                            />{/* 
+                            // We don't care about this 'for' input error
+                            // @ts-ignore */}
+                            <ChooseFileButton disabled={uploading} as="label" for="fileInput">
+                                Select File to Upload (Zip, Phz)
+                            </ChooseFileButton>
+                            <UploadButton disabled={!fileName} onClick={() => this.uploadFile()}>Upload</UploadButton>
+                        </Detail>
+                    </UploadWrapper>
+                </Router>
             </PlatesWrapper>
         )
     }

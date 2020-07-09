@@ -5,6 +5,7 @@ import styled from "@emotion/styled";
 import Nav from "./nav";
 import Home from './pages/home'
 import Plates from './pages/plates'
+import ProfilesView from './pages/profiles'
 import {BrowserRouter as Router, Route} from 'react-router-dom'
 import Modal from './modal'
 import Loader from './loader'
@@ -55,7 +56,7 @@ const sections:Array<NavSection> = [
 
 const appRoot = "/transui"
 
-const getPath = (path: string) => {
+export const getPath = (path: string) => {
     return [appRoot, path].join('/')
 }
 
@@ -145,6 +146,7 @@ export default class TransUIApp extends React.Component<{}, State> {
                     RESSIN_NAME: 'Water Washable'
                 }
                 */
+                // data.printInitializing = true;
                 this.setState({
                     status: data
                 })
@@ -165,7 +167,7 @@ export default class TransUIApp extends React.Component<{}, State> {
                     <Details css={css({paddingRight: "1.5rem"})}>
                         <Detail size="large">Processing Upload</Detail>
                         <Detail size="small">Please wait while the upload is processed. This can take a few minutes.</Detail>
-                        <Detail size="small"><strong>Do not refresh the page</strong>.</Detail>
+                        <Detail size="small" css={css({color: '#FF1493', fontWeight: 'bold'})}>Do not refresh the page.</Detail>
                         <Detail>Current Status: {processingStatus}</Detail>
                     </Details>
                     <Details>
@@ -202,6 +204,9 @@ export default class TransUIApp extends React.Component<{}, State> {
                                 case 'plates':
                                     return <PageWrapper><Plates status={this.state.status}/></PageWrapper>
                                 case '':
+                                    case 'profiles':
+                                        return <PageWrapper><ProfilesView status={this.state.status}/></PageWrapper>
+                                    case '':
                                 default:
                                     return <ClearPageWrapper><Home status={this.state.status}/></ClearPageWrapper>
                                 break;

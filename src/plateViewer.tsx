@@ -72,7 +72,7 @@ export default class PateViewer extends React.Component<Props, State> {
             this.debouceTimeOut = setTimeout(() =>{
                 this.updateLayer(this.nextValue || layer)
                 this.debouceTimeOut = undefined
-            }, 50)
+            }, 33)
         } else {
             this.nextValue = layer
         }
@@ -103,7 +103,7 @@ export default class PateViewer extends React.Component<Props, State> {
 
         let sliderWidth = 0;
         if (this.slider){
-            sliderWidth = this.slider.getBoundingClientRect().width - 40
+            sliderWidth = this.slider.getBoundingClientRect().width - 45
         }
 
         return (

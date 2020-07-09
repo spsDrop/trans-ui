@@ -70,6 +70,9 @@ class TransUiApi(object):
         self.app.add_url_rule(rule='/api/plates/delete/<int:plateId>', view_func=self.apiPlatesDelete, methods=['GET', 'POST'])
         self.app.add_url_rule(rule='/api/plates/print/<int:plateId>', view_func=self.apiPlatesPrint, methods=['GET', 'POST'])
         self.app.add_url_rule('/api/resin', 'apiResin', self.apiResin)
+        self.app.add_url_rule('/api/resin/create', view_func=self.apiResinCreate, methods=['GET', 'POST'])
+        self.app.add_url_rule('/api/resin/update/<int:profileId>', view_func=self.apiResinUpdate, methods=['GET', 'POST'])
+        self.app.add_url_rule('/api/resin/delete/<int:profileId>', view_func=self.apiResinDelete, methods=['GET', 'POST'])
         self.app.add_url_rule('/api/print/stop', 'apiPrintStop', self.apiPrintStop)
         self.app.add_url_rule('/api/print/pause', 'apiPrintPause', self.apiPrintPause)
         self.app.add_url_rule('/api/print/resume', 'apiPrintResume', self.apiPrintResume)
@@ -162,6 +165,12 @@ class TransUiApi(object):
         platesData.sort(key=lambda s: s['ID'], reverse=True)
         self.writePlates(platesData)
 
+    def writeNewResin(self, profile):
+        resinProfiles = self.loadResins()
+        resinProfiles.append(profile)
+        resinProfiles.sort(key=lambda s: s['id'], reverse=True)
+        self.writeResins(resinProfiles)
+
     def resetDir(self, path):
         subprocess.call(["rm", "-rf", path])
         time.sleep(0.1)
@@ -194,23 +203,25 @@ class TransUiApi(object):
     # Logic Utilities
 
     def isValidResinId(self, id, resins=[]):
-        if bool(resins):
+        if not bool(resins):
             resins = self.loadResins()
+            log('loaded resins')
         try:
             return bool(self.getResinById(id, resins))
         except:
+            log('error checking resin')
             return False
 
     def isValidPlateId(self, id, plates=[]):
-        if bool(plates):
+        if not bool(plates):
             plates = self.loadPlates()
         try:
             return bool(self.getPlateById(id, plates))
         except:
             return False
 
-    def getResinById(self, id, plates):
-        return next(filter(lambda r: r.get('id') == id, plates))
+    def getResinById(self, id, resinProfiles):
+        return next(filter(lambda r: r.get('id') == id, resinProfiles))
 
     def getPlateById(self, id, plates):
         return next(filter(lambda r: r.get('ID') == id, plates))
@@ -376,3 +387,30 @@ class TransUiApi(object):
 
     def apiResin(self):
         return json.dumps(self.loadResins())
+
+    def apiResinUpdate(self, profileId):
+        resinProfiles = self.loadResins()
+        if not self.isValidResinId(profileId, resinProfiles):
+            return self.renderError('Invalid resin profile id')
+
+        resinProfile = self.getResinById(profileId, resinProfiles)
+        resinProfile.update(request.json)
+
+        self.writeResins(resinProfiles)
+        return json.dumps({'success': True})
+
+    def apiResinCreate(self):
+        profile = request.json
+        profile['id'] = int(time.time() * 10 )
+        self.writeNewResin(profile)
+        return json.dumps({'success': True})
+
+    def apiResinDelete(self, profileId):
+        try:
+            filteredProfiles = list(filter(lambda profile: profile["id"] != profileId, self.loadResins()))
+
+            self.writeResins(filteredProfiles)
+        except:
+            return self.renderError('Error writing profiles data.')
+
+        return json.dumps({'success': True})
