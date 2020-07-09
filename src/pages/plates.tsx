@@ -5,7 +5,21 @@ import {BrowserRouter as Router, Route, Link} from 'react-router-dom'
 import styled from "@emotion/styled"
 import { AppStatus, getPath } from '../app'
 import { secondsToTimeString, calculatePrintTime } from "../utils/time";
-import { Detail, Details, HorizontalGroup, ContainerBox, PreviewWrap, Preview, PreviewDetail, Button, RedButton, GreenButton, singleColumnBreak } from '../commonStyledComponents'
+import { 
+    Detail,
+    Details,
+    HorizontalGroup,
+    ContainerBox,
+    PreviewWrap,
+    Preview,
+    PreviewDetail,
+    Button,
+    RedButton,
+    GreenButton,
+    UploadInput,
+    ChooseFileButton,
+    singleColumnBreak
+} from '../commonStyledComponents'
 import Modal from '../modal'
 import PlateViewer from '../plateViewer'
 import axios from 'axios'
@@ -47,15 +61,7 @@ const Plate = styled(ContainerBox)``
 const UploadWrapper = styled(ContainerBox)`
     min-width: 19rem;
 `
-const ChooseFileButton = styled(Button)`
-    white-space: nowrap;
-`
-const UploadInput = styled.input`
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    visibility: hidden;
-`
+
 const UploadButton = styled(Button)``
 const UploadProgress = styled.div`
     margin: 2rem 0;

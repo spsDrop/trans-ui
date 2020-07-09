@@ -5,7 +5,22 @@ import {BrowserRouter as Router, Route, Link} from 'react-router-dom'
 import styled from "@emotion/styled"
 import { AppStatus, getPath } from '../app'
 import { secondsToTimeString, calculatePrintTime } from "../utils/time";
-import { Detail, Details, HorizontalGroup, ContainerBox, PreviewWrap, Preview, PreviewDetail, Button, RedButton, GreenButton, singleColumnBreak, getButtonColors } from '../commonStyledComponents'
+import {
+    Detail,
+    Details,
+    HorizontalGroup,
+    ContainerBox,
+    PreviewWrap,
+    Preview,
+    PreviewDetail,
+    Button,
+    RedButton,
+    GreenButton,
+    ChooseFileButton,
+    UploadInput,
+    singleColumnBreak,
+    getButtonColors
+} from '../commonStyledComponents'
 import Modal from '../modal'
 import axios from 'axios'
 
@@ -37,12 +52,62 @@ const sanitizeField = (name, value) => {
     }
 }
 
+const sanitizeProfile = (profile) => {
+    const  {
+        Z,
+        burnCure,
+        burnLayer,
+        burn_pull_speed,
+        burn_pull_z,
+        id,
+        led_delay,
+        name,
+        normalCure,
+        pull_speed,
+        pull_z,
+        push_speed 
+    } = profile;
+    const cleanProfile =  {
+        Z,
+        burnCure,
+        burnLayer,
+        burn_pull_speed,
+        burn_pull_z,
+        id,
+        led_delay,
+        name,
+        normalCure,
+        pull_speed,
+        pull_z,
+        push_speed 
+    }
+    Object.keys(cleanProfile).forEach(fieldName => {
+        cleanProfile[fieldName] = sanitizeField(fieldName, cleanProfile[fieldName])
+    })
+    return cleanProfile
+}
+
+const validProfile = (profile) => {
+    return Object.keys(profile).reduce((acc, fieldName) => {
+        if (!acc) {
+            return acc
+        }
+
+        if(fieldName === 'name') {
+            return typeof profile[fieldName] === 'string'
+        } else {
+            return typeof profile[fieldName] === 'number'
+        }
+    }, true)
+}
+
 type Props = {
     status: AppStatus
 }
 
 type State = {
-    profiles: ResinProfile[]
+    profiles: ResinProfile[],
+    fileName: string
 }
 
 export type ResinProfile =   {
@@ -138,14 +203,18 @@ export default class ProfileView extends React.Component<Props, State> {
 
     duplicateProfile(profile){
         const newData = {...profile, name: profile.name+' Copy'}
+        this.createProfile(newData)
+    }
+
+    createProfile(profile) {
         axios.post(
             '/api/resin/create',
-            newData
+            profile
         ).then(res => {
             if (res?.data?.success) {
                 this.updateResin()
             } else {
-                console.error(res.data.message);
+                console.error(res.data.message)
             }
         }).
         catch(error => {
@@ -182,6 +251,33 @@ export default class ProfileView extends React.Component<Props, State> {
     cancelModal() {
         history.replaceState({}, '', getPath('profiles'))
         history.back()
+    }
+
+    uploadEl: HTMLInputElement
+
+    changeFile() {
+        if (this.uploadEl.files[0]) {
+            this.setState({
+                fileName: this.uploadEl.files[0].name
+            })
+        }
+    }
+
+    uploadFile() {
+        if (this.uploadEl.files[0]) {
+            this.uploadEl.files[0].text().then(text =>{
+                try {
+                    const profile = sanitizeProfile(JSON.parse(text))
+                    if (validProfile(profile)){
+                        this.createProfile(profile)
+                    } else {
+                        alert('Profile invalid')
+                    }
+                } catch(e) {
+
+                }
+            })
+        }
     }
 
     renderProfile(profile: ResinProfile) {
@@ -260,7 +356,8 @@ export default class ProfileView extends React.Component<Props, State> {
 
     render() {
         const {
-            profiles
+            profiles,
+            fileName
         } = this.state;
         return (
             <Router>
@@ -281,6 +378,20 @@ export default class ProfileView extends React.Component<Props, State> {
                 <Grid>
                     {profiles && profiles.map(profile => this.renderProfile(profile))}
                     <ContainerBox>
+                            <Detail>{fileName || 'No File Selected'}</Detail>
+                            <UploadInput
+                                onChange={() => this.changeFile()}
+                                ref={el => this.uploadEl = el}
+                                type="file"
+                                accept=".json"
+                                id="fileInput"
+                            />{/* 
+                            // We don't care about this 'for' input error
+                            // @ts-ignore */}
+                            <ChooseFileButton as="label" for="fileInput">
+                                Select File to Upload (Zip, Phz)
+                            </ChooseFileButton>
+                            <Button disabled={!fileName} onClick={() => this.uploadFile()}>Upload</Button>
 
                     </ContainerBox>
                 </Grid>

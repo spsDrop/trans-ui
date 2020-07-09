@@ -127,6 +127,17 @@ export const RedButton = styled(Button)`
 `
 
 
+export const UploadInput = styled.input`
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    visibility: hidden;
+`
+
+export const ChooseFileButton = styled(Button)`
+    white-space: nowrap;
+`
+
 export const PreviewWrap = styled.div<{previewUrl: string}>`
     background: center center url(${props => props.previewUrl}) no-repeat;
     background-size: cover;

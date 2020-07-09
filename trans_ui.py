@@ -124,14 +124,16 @@ class TransUiApi(object):
         try:
             savedState = self.readJsonFile(self.stateFilePath)
         except:
-            self.initializeServerState()
+            savedState = self.initializeServerState()
         return savedState
 
     def initializeServerState(self):
-        self.writeServerState({
+        initialState = {
             'processingUpload': False,
             'printInitializing': False
-        })
+        }
+        self.writeServerState(initialState)
+        return initialState
 
     def writePlates(self, plates):
         self.writeJsonFile(self.platesFilePath, plates)
