@@ -107,7 +107,7 @@ type Props = {
 
 type State = {
     profiles: ResinProfile[],
-    fileName: string
+    fileName?: string
 }
 
 export type ResinProfile =   {
@@ -151,9 +151,10 @@ export default class ProfileView extends React.Component<Props, State> {
     changeTimer = undefined
     flushing = false
 
-    changeHandler(e: React.ChangeEvent<HTMLFormElement>, profileId) {
+    changeHandler(e: React.FormEvent<HTMLFormElement>, profileId) {
         this.profilesToUpdate[profileId] = this.profilesToUpdate[profileId] || {};
-        this.profilesToUpdate[profileId][e.target.name] = sanitizeField(e.target.name, e.target.value)
+        const target: HTMLInputElement = e.target as HTMLInputElement
+        this.profilesToUpdate[profileId][target.name] = sanitizeField(target.name, target.value)
         if (!this.flushing) {
             this.scheduleFlush()
         }
@@ -389,7 +390,7 @@ export default class ProfileView extends React.Component<Props, State> {
                             // We don't care about this 'for' input error
                             // @ts-ignore */}
                             <ChooseFileButton as="label" for="fileInput">
-                                Select File to Upload (Zip, Phz)
+                                Select File to Upload (json)
                             </ChooseFileButton>
                             <Button disabled={!fileName} onClick={() => this.uploadFile()}>Upload</Button>
 

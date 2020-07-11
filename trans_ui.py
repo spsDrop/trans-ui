@@ -63,19 +63,24 @@ class TransUiApi(object):
         self.app.add_url_rule('/transui/', 'transIndex', self.transIndex)
         self.app.add_url_rule('/transui/<path:page>', 'transPage', self.transIndex)
 
-        self.app.add_url_rule('/api/status', 'apiStatus', self.apiStatus)
         self.app.add_url_rule('/api/plates', 'apiPlates', self.apiPlates)
         self.app.add_url_rule(rule='/api/plates/updateResin/<int:plateId>/<int:resinId>', view_func=self.apiPlatesUpdate, methods=['GET', 'POST'])
         self.app.add_url_rule(rule='/api/plates/upload', view_func=self.apiPlatesUpload, methods=['POST'])
         self.app.add_url_rule(rule='/api/plates/delete/<int:plateId>', view_func=self.apiPlatesDelete, methods=['GET', 'POST'])
         self.app.add_url_rule(rule='/api/plates/print/<int:plateId>', view_func=self.apiPlatesPrint, methods=['GET', 'POST'])
+        self.app.add_url_rule('/api/print/stop', 'apiPrintStop', self.apiPrintStop)
+        self.app.add_url_rule('/api/print/pause', 'apiPrintPause', self.apiPrintPause)
+        self.app.add_url_rule('/api/print/resume', 'apiPrintResume', self.apiPrintResume)
         self.app.add_url_rule('/api/resin', 'apiResin', self.apiResin)
         self.app.add_url_rule('/api/resin/create', view_func=self.apiResinCreate, methods=['GET', 'POST'])
         self.app.add_url_rule('/api/resin/update/<int:profileId>', view_func=self.apiResinUpdate, methods=['GET', 'POST'])
         self.app.add_url_rule('/api/resin/delete/<int:profileId>', view_func=self.apiResinDelete, methods=['GET', 'POST'])
-        self.app.add_url_rule('/api/print/stop', 'apiPrintStop', self.apiPrintStop)
-        self.app.add_url_rule('/api/print/pause', 'apiPrintPause', self.apiPrintPause)
-        self.app.add_url_rule('/api/print/resume', 'apiPrintResume', self.apiPrintResume)
+        self.app.add_url_rule('/api/system/reboot', view_func=self.apiSystemReboot, methods=['GET', 'POST'])
+        self.app.add_url_rule('/api/system/shutdown', view_func=self.apiSystemShutdown, methods=['GET', 'POST'])
+        self.app.add_url_rule('/api/status', 'apiStatus', self.apiStatus)
+        self.app.add_url_rule('/api/wifi/connect', view_func=self.apiWifiConnect, methods=['POST'])
+        self.app.add_url_rule('/api/wifi/scan', 'apiWifiScan', self.apiWifiScan)
+        self.app.add_url_rule('/api/wifi/status', 'apiWifiStatus', self.apiWifiStatus)
 
     def updateStatus(self):
         h3 = self.h3info_class.h3()
@@ -357,7 +362,7 @@ class TransUiApi(object):
         if not self.isValidPlateId(plateId):
             return self.renderError('Invalid plateId.')
 
-        subprocess.call(["mqttpub.sh", "printer/printchitu", plateId])
+        subprocess.call(["mqttpub.sh", "printer/printchitu", str(plateId)])
 
         self.updateServerState({ 'printInitializing': True })
 
@@ -416,3 +421,37 @@ class TransUiApi(object):
             return self.renderError('Error writing profiles data.')
 
         return json.dumps({'success': True})
+
+    def apiWifiStatus(self):
+        wifi = self.class_wifi_4k.WIFI()
+
+        return json.dumps({"ssid": wifi.isWIFI()})
+
+    def apiWifiScan(self):
+        wifi = self.class_wifi_4k.WIFI()
+        wifi.getwifi()
+        time.sleep(3)
+
+        return json.dumps(wifi.getwifi())
+
+    def apiWifiConnect(self):
+        wifi = self.class_wifi_4k.WIFI()
+        post = request.json
+
+        wifi.ssid = post["ssid"]
+        wifi.password = post["password"]
+
+        wifi.connect()
+
+        return json.dumps({"success": True})
+
+    def apiSystemReboot(self):
+        subprocess.call(["mqttpub.sh", "printer/hmicontrol", 'reboot'])
+        time.sleep(0.1)
+        return json.dumps({"success": True})
+
+    def apiSystemShutdown(self):
+        subprocess.call(["mqttpub.sh", "printer/hmicontrol", 'shutdown'])
+        time.sleep(0.1)
+        return json.dumps({"success": True})
+        

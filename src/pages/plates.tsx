@@ -400,7 +400,7 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
                             // We don't care about this 'for' input error
                             // @ts-ignore */}
                             <ChooseFileButton disabled={uploading} as="label" for="fileInput">
-                                Select File to Upload (Zip, Phz)
+                                Select File to Upload (zip, phz)
                             </ChooseFileButton>
                             <UploadButton disabled={!fileName} onClick={() => this.uploadFile()}>Upload</UploadButton>
                         </Detail>
