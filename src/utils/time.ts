@@ -1,4 +1,4 @@
-import { ResinProfile } from "../pages/plates"
+import { ResinProfile } from "../pages/profiles"
 
 
 export type Duration = {
@@ -22,16 +22,16 @@ export const secondsToTimeString = (timeInSeconds: number) => {
     return `${days > 0 ? ` ${days}d` : ''}${hours > 0 ? ` ${hours}h` : ''}${minutes > 0 ? ` ${minutes}m` : ''}`
 }
 
+const fixedLayerDuration = 3.7 * 1000
+const printInitializationDuration = 1.33 * 60 * 1000
+
 export const calculatePrintTime = (resin: ResinProfile, numLayers: number) => {
     const {
-        Z,
         burnCure,
         burnLayer,
         burn_pull_speed: burnLiftSpeed,
         burn_pull_z: burnHeight,
-        id,
         led_delay: ledDelay,
-        name,
         normalCure,
         pull_speed: liftSpeed,
         pull_z: height,
@@ -47,8 +47,8 @@ export const calculatePrintTime = (resin: ResinProfile, numLayers: number) => {
 
     let duration = 0;
 
-    duration += burnLayer * (burnLiftDuration + burnDownDuration + burnCure + ledDelay)
-    duration += (numLayers - burnLayer) * (liftDuration + downDuration + normalCure + ledDelay)
+    duration += burnLayer * (burnLiftDuration + burnDownDuration + burnCure + ledDelay + fixedLayerDuration)
+    duration += (numLayers - burnLayer) * (liftDuration + downDuration + normalCure + ledDelay + fixedLayerDuration)
 
-    return duration / 1000
+    return (duration + printInitializationDuration) / 1000
 }

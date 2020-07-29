@@ -32,7 +32,8 @@ export type PlateProfile = {
     LAYER: number,
     NAME: string,
     PROFILE_ID: number,
-    SPEND_TIME: number
+    SPEND_TIME?: number,
+    printDuration?: number
 }
 
 const LinkedRedButton = RedButton.withComponent(Link)
@@ -289,8 +290,13 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
                                             {plate.LAYER} Layers
                                         </Detail>
                                         <Detail>
-                                            Duration {secondsToTimeString(plate.SPEND_TIME || projectedTime)}
+                                            Projected Duration {secondsToTimeString(projectedTime)}
                                         </Detail>
+                                        {!!plate.SPEND_TIME && (
+                                            <Detail>
+                                                Previous Duration {secondsToTimeString(plate.printDuration || plate.SPEND_TIME)}
+                                            </Detail>
+                                        )}
                                     </PreviewDetail>
                                 </PreviewWrap>
                             </Link>

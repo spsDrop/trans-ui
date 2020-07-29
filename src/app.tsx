@@ -84,7 +84,8 @@ export type AppStatus = {
     language?: string,
     processingUpload?: boolean,
     processingStatus?: string,
-    printInitializing?: boolean
+    printInitializing?: boolean,
+    printStartTime?: number
 }
 
 type State = {

@@ -9,9 +9,9 @@ const ModalBase = styled<'div', {shown?: boolean}>('div')`
 const ModalBackground = styled.div`
     position: fixed;
     top: 0;
-    width: 100%;
+    width: 100vw;
     left: 0;
-    height: 100%;
+    height: 100vh;
     background: hsla(0, 0%, 5%, 0.8);
     animation: fadeIn 0.25s ease-out;
     z-index: 3;

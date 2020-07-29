@@ -3,6 +3,7 @@ import json
 import sys
 import time
 import subprocess
+import logging
 from flask import render_template_string, request
 fileRoot = os.path.dirname(os.path.abspath(__file__))
 
@@ -49,12 +50,25 @@ class TransUiApi(object):
         def handleMessage(client, userdata, message):
             payload = message.payload.decode()
             serverState = self.loadServerState()
-            self.printerStatus = json.loads(payload)
+            nextStatus = json.loads(payload)
+            log(payload)
 
-            if self.printerStatus["PRINTING"] == True and serverState["printInitializing"] == True :
-                self.updateServerState({'printInitializing': False})
+            try:
+                if nextStatus.get("PRINTING") == True and serverState["printInitializing"] == True :
+                    self.updateServerState({'printInitializing': False, 'printStartTime': time.time()})
 
-            self.updateStatus()
+                if self.printerStatus.get("PRINTING") == True and nextStatus.get("PRINTING") != True :
+                    self.updatePlate(
+                        int(self.printerStatus["PLATE_ID"]), 
+                        {
+                            'printDuration': time.time() - serverState.get('printStartTime')
+                        }
+                    )
+
+                self.printerStatus = nextStatus
+                self.updateStatus()
+            except Exception as err:
+                logging.error('Error setting status:', exc_info=err)
 
     # Internal Buisness and State
 
@@ -96,7 +110,9 @@ class TransUiApi(object):
             'language': self.config.language,
             'processingUpload': serverState.get('processingUpload'),
             'processingStatus': serverState.get('processingStatus'),
-            'printInitializing': serverState.get('printInitializing')
+            'printInitializing': serverState.get('printInitializing'),
+            'printInitializationTime': serverState.get('printInitializationTime'),
+            'printStartTime': serverState.get('printStartTime')
         }
 
         self.systemStatus = status
@@ -135,7 +151,9 @@ class TransUiApi(object):
     def initializeServerState(self):
         initialState = {
             'processingUpload': False,
-            'printInitializing': False
+            'printInitializing': False,
+            'printInitializationTime': 0,
+            'printStartTime': 0
         }
         self.writeServerState(initialState)
         return initialState
@@ -148,6 +166,15 @@ class TransUiApi(object):
 
     def writeServerState(self, state):
         self.writeJsonFile(self.stateFilePath, state)
+
+    def updatePlate(self, plateId, plateUpdate):
+        plates = self.loadPlates()
+        try:
+            plate = self.getPlateById(plateId, plates)
+        except Exception as err:
+            logging.error('Error getting plate:', exc_info=err)
+        plate.update(plateUpdate)
+        self.writePlates(plates)
 
     def updateServerState(self, state):
         savedState = self.loadServerState()
@@ -364,7 +391,7 @@ class TransUiApi(object):
 
         subprocess.call(["mqttpub.sh", "printer/printchitu", str(plateId)])
 
-        self.updateServerState({ 'printInitializing': True })
+        self.updateServerState({ 'printInitializing': True, 'printInitializationTime': time.time() })
 
         return json.dumps({'success': True})
 

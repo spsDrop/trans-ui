@@ -161,6 +161,9 @@ export const PreviewDetail = styled(ContainerBox)`
     left: 1rem;
     padding: 0.75rem;
     background-color: rgba(16, 16, 16, 0.9);
+    :last-child {
+        margin-bottom: 0;
+    }
 `
 export const Preview = styled.img`
     position: absolute;

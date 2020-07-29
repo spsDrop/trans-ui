@@ -54,6 +54,7 @@ const PrintStatus: React.SFC<{status: AppStatus, updateStatus: ()=> void}> = ({
         cpuTemp,
         cpuLoad,
         printInitializing,
+        printStartTime,
         printStatus: {
             LAYER: currentLayer = 1,
             LAYER_TOT: totalLayers,
@@ -72,6 +73,7 @@ const PrintStatus: React.SFC<{status: AppStatus, updateStatus: ()=> void}> = ({
                 <Detail size="large">Printing {plateName}</Detail>
                 <Detail>Layer: {currentLayer} of {totalLayers}</Detail>
                 <Detail>Time Remaining: {secondsToTimeString(secondsRemaining)}</Detail>
+                <Detail>Time Elapsed: {secondsToTimeString((Date.now() / 1000) - printStartTime)}</Detail>
                 <Detail>Resin Profile: {resinName}</Detail>
                 <Detail>CPU Usage: {cpuLoad}%</Detail>
                 <Detail>CPU Temp: {cpuTemp}</Detail>
