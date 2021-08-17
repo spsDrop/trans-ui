@@ -111,7 +111,7 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
         this.updateResin();
     }
 
-    componentWillUpate(nextProps) {
+    componentWillUpdate(nextProps) {
         if(this.props.status.processingUpload && !nextProps.status.processingUpload) {
             this.updatePlates()
         }
@@ -260,7 +260,7 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
             <Button disabled={uploading} onChange={(e) => this.changeResin(e, plate.ID)} as="select">
                 {
                     resin.map((resinProfile: ResinProfile) => {
-                        return <option selected={plate.PROFILE_ID === resinProfile.id} value={resinProfile.id}>{resinProfile.name}</option>
+                        return <option value={resinProfile.id}>{resinProfile.name}</option>
                     })
                 }
             </Button>
@@ -274,7 +274,7 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
             <PlateList>{
                 plates.map( (plate: PlateProfile) => {
                     const resin = resinList.filter(resinProfile => resinProfile.id === plate.PROFILE_ID)[0]
-                    const projectedTime = calculatePrintTime(resin, plate.LAYER)
+                    const projectedTime = resin ? calculatePrintTime(resin, plate.LAYER) : 0;
 
                     return (
                         <Plate>
@@ -304,6 +304,8 @@ export default class Plates extends React.Component<{status: AppStatus},State> {
                                 <Details>
                                     {this.renderResinOption(plate)}
                                 </Details>
+                            </HorizontalGroup>
+                            <HorizontalGroup>
                                 <Details>
                                     <LinkedGreenButton disabled={uploading} to={getPath(`plates/print/${plate.ID}`)}>
                                         Print

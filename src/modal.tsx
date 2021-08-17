@@ -9,9 +9,9 @@ const ModalBase = styled<'div', {shown?: boolean}>('div')`
 const ModalBackground = styled.div`
     position: fixed;
     top: 0;
-    width: 100vw;
+    width: 100%;
     left: 0;
-    height: 100vh;
+    height: 100%;
     background: hsla(0, 0%, 5%, 0.8);
     animation: fadeIn 0.25s ease-out;
     z-index: 3;
@@ -23,13 +23,16 @@ const ModalBackground = styled.div`
 `
 const ModalWrapper = styled.div`
     position: fixed;
-    top: 10rem;
+    top: 5vh;
+    left: 0;
     width: 100%;
     z-index: 4;
 `
 const ModalContent = styled(ContainerBox)`
     width: max-content;
     max-width: 90%;
+    max-height: 90vh;
+    overflow: auto;
     box-sizing: border-box;
     margin: auto;
     animation: slideIn 0.25s cubic-bezier(0.5, 1, 0.89, 1);

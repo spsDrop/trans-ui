@@ -110,7 +110,7 @@ export default class PateViewer extends React.Component<Props, State> {
             <Details css={css({userSelect:'none'})}>
                 <Detail>{plateName}</Detail>
                 <Detail>
-                    <img css={css({width: '100%'})} src={`/plates/${plateId}/${currentImage}.png`} />
+                    <img css={css({maxWidth: '100%', margin: 'auto', maxHeight: '45vh', display: 'block'})} src={`/plates/${plateId}/${currentImage}.png`} />
                 </Detail>
                 <Detail>
                     <Slider 

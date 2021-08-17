@@ -16,6 +16,7 @@ module.exports = {
     publicPath: '/',
     filename: 'main.js'
   },
+  devtool: 'source-map',
   devServer: {
     contentBase: './dist'
   }

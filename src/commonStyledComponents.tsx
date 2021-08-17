@@ -50,7 +50,7 @@ export const getButtonColors = (hue) => `
     background-color: hsl(${hue}, 80%, 30%);
     border-color: hsl(${hue}, 80%, 15%);
     text-shadow: 0.125rem 0.125rem 2px hsl(${hue}, 80%, 15%);
-    :hover {
+    :hover, :focus {
         box-shadow:
             0 0 0.5rem hsla(${hue}, 80%, 50%, 0.5),
             inset 0 0 1.6rem hsl(${hue}, 80%, 50%);
@@ -76,7 +76,7 @@ export const Button = styled.button<AsAble>`
     border-right: 0.125rem solid;
     cursor: pointer;
 
-    :hover {
+    :hover, :focus {
         text-decoration: none;
         outline: none;
         box-shadow: inset 0 0 3rem;
@@ -108,6 +108,10 @@ export const Button = styled.button<AsAble>`
         background-repeat: no-repeat;
         background-position-x: calc(100% - 0.5rem);
         background-position-y: 50%;
+
+        :active {
+            transform: none;
+        }
 
         option:focus, option:hover{
             border-radius: 0.5rem;

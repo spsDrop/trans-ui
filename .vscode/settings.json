@@ -1,0 +1,11 @@
+{
+    "sync-rsync.sites": [
+        {
+            "remotePath": "soljin@192.168.10.47:~/trans-ui"
+        }
+    ],
+    "sync-rsync.include": ["*/", "index.html", "/trans_ui.py", "/dist/*"],
+    "sync-rsync.exclude": ["*"],
+    "sync-rsync.onSave": true,
+    "sync-rsync.args": ["-m"]
+}
